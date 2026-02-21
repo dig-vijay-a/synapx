@@ -26,5 +26,12 @@
     "nonce_b64": "Xda2N0cs85hXTBTG",
     "enc_path": "C:\\Users\\digvi\\OneDrive\\Desktop\\synapx\\Backend\\uploads\\fd68a808-c0be-4850-9203-c992ba40e203.enc",
     "size_bytes": 194337
+  },
+  "4bcc8c5d-b26d-486c-8611-8fdb5d812488": {
+    "original_name": "ONE PAGE WRITE UP MODULE 3.pdf",
+    "salt_b64": "P3wu2AJtsxU8BUayi40Pbg==",
+    "nonce_b64": "fwtP3XkphzjwXoCV",
+    "enc_path": "C:\\Users\\digvi\\OneDrive\\Desktop\\synapx\\Backend\\uploads\\4bcc8c5d-b26d-486c-8611-8fdb5d812488.enc",
+    "size_bytes": 194337
   }
 }
