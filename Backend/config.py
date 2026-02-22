@@ -19,13 +19,20 @@ else:
 
 # ── Paths
 BASE_DIR        = os.path.dirname(__file__)
-UPLOAD_FOLDER   = os.path.join(BASE_DIR, "uploads")
-INDEX_FILE      = os.path.join(UPLOAD_FOLDER, "index.json")
+# UPLOAD_FOLDER is legacy; everything is in CloudVault
+# UPLOAD_FOLDER   = os.path.join(BASE_DIR, "uploads")
+# ── Cloud Simulation ──
+CLOUD_VAULT_DIR = os.path.join(BASE_DIR, "CloudVault")
+INDEX_FILE      = os.path.join(CLOUD_VAULT_DIR, "index.json")
+CLOUD_PROVIDER  = "SynapxCloud-Simulated"
+CLOUD_BUCKET    = "secure-vault-01"
+CLOUD_REGION    = "us-east-1"
+# ───────────────────────
 
 # ── TEE / VM lifecycle
-VM_SEARCH_LIMIT     = 10       # total searches before VM state reset
-SESSION_TTL_SECONDS = 120      # seconds before an unused session expires
-WATCHDOG_INTERVAL   = 30       # seconds between watchdog sweeps
+VM_SEARCH_LIMIT     = 100      # total searches before VM state reset (docker reset)
+SESSION_TTL_SECONDS = 300      # seconds before an unused session expires
+WATCHDOG_INTERVAL   = 60       # seconds between watchdog sweeps
 
 # ── Constant-time response settings
 RESPONSE_DEADLINE_MS = 500     # total ms budget for each search response
@@ -35,4 +42,15 @@ RESPONSE_PAD_SIZE    = 4096    # every response is padded to exactly this many b
 RSA_KEY_BITS = 2048
 
 # ── CORS
-ALLOWED_ORIGINS = ["http://localhost:5173", "http://127.0.0.1:5173"]
+ALLOWED_ORIGINS = ["*"]
+
+# ── Indexing Config
+PAGE_SIZE      = 2000  # fallback characters per page
+PAGE_DELIMITER = "\x0c" # Form Feed (\f) for natural page breaks
+
+# ── Docker settings
+DOCKER_IMAGE_NAME    = "synapx-tee-worker:latest"
+DOCKER_TIMEOUT       = 15                          # seconds to wait for worker
+DOCKER_MEMORY_LIMIT  = "512m"
+DOCKER_CPU_QUOTA     = 50000                       # 50% of one core
+

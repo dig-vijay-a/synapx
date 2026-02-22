@@ -6,7 +6,7 @@ Provides sound-alike matching using two algorithms:
   - Double Metaphone : more accurate, handles English phoneme variations
 
 Usage:
-    from tee.phonetics import phonetic_match, encode_word
+    from utils.phonetics import phonetic_match, encode_word
 
     if phonetic_match("encryption", "inkription"):
         ...  # True — same Soundex or Metaphone code
@@ -25,6 +25,8 @@ except ImportError:
 # Fallback: Pure-Python Soundex (if jellyfish not installed)
 # ─────────────────────────────────────────────────────────────
 
+_CLEAN_RE = re.compile(r"[^A-Za-z]")
+
 _SOUNDEX_TABLE = str.maketrans(
     "BFPVCGJKQSXZDTLMNR",
     "111122222222334556"
@@ -36,7 +38,7 @@ def _soundex(word: str) -> str:
     """Return the 4-character Soundex code for a word."""
     if not word:
         return "0000"
-    word = re.sub(r"[^A-Za-z]", "", word).upper()
+    word = _CLEAN_RE.sub("", word).upper()
     if not word:
         return "0000"
     first = word[0]
@@ -82,7 +84,7 @@ def encode_word(word: str) -> dict:
     Return all phonetic codes for a word.
     { "soundex": str, "metaphone": str | None }
     """
-    clean = re.sub(r"[^A-Za-z]", "", word)
+    clean = _CLEAN_RE.sub("", word)
     return {
         "soundex":   soundex(clean) if clean else None,
         "metaphone": metaphone(clean) if clean else None,
@@ -94,8 +96,8 @@ def phonetic_match(keyword: str, candidate: str) -> bool:
     Return True if keyword and candidate sound alike under either algorithm.
     Both words must be non-trivially long (≥ 2 chars) to avoid false positives.
     """
-    kw = re.sub(r"[^A-Za-z]", "", keyword).strip()
-    cd = re.sub(r"[^A-Za-z]", "", candidate).strip()
+    kw = _CLEAN_RE.sub("", keyword).strip()
+    cd = _CLEAN_RE.sub("", candidate).strip()
 
     if len(kw) < 2 or len(cd) < 2:
         return False

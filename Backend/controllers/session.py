@@ -13,7 +13,7 @@ from cryptography.hazmat.primitives.asymmetric import rsa, padding
 from cryptography.hazmat.primitives import hashes, serialization
 
 import config
-from routes.upload import _load_index
+from controllers.upload import _load_index
 
 session_bp = Blueprint("session", __name__)
 

@@ -8,10 +8,10 @@ from flask import Flask
 from flask_cors import CORS
 
 import config
-from routes.upload  import upload_bp
-from routes.session import session_bp
-from routes.search  import search_bp
-from tee.tee_manager import tee_manager
+from controllers.upload  import upload_bp
+from controllers.session import session_bp
+from controllers.search  import search_bp
+from utils.tee_manager import tee_manager
 
 
 def create_app() -> Flask:
@@ -20,8 +20,8 @@ def create_app() -> Flask:
     # Allow requests from the Vite dev server
     CORS(app, resources={r"/api/*": {"origins": config.ALLOWED_ORIGINS}})
 
-    # Ensure upload folder exists
-    os.makedirs(config.UPLOAD_FOLDER, exist_ok=True)
+    # Ensure cloud vault directory exists
+    os.makedirs(config.CLOUD_VAULT_DIR, exist_ok=True)
 
     # Register blueprints
     app.register_blueprint(upload_bp)
@@ -49,13 +49,24 @@ if __name__ == "__main__":
         datefmt="%H:%M:%S",
     )
 
+    cert_path = os.path.abspath(os.path.join(config.BASE_DIR, "..", "cert.pem"))
+    key_path  = os.path.abspath(os.path.join(config.BASE_DIR, "..", "key.pem"))
+
     app = create_app()
     # Start TEE watchdog background thread
     tee_manager.start_watchdog()
+
+    if os.path.exists(cert_path) and os.path.exists(key_path):
+        logging.info(f"[SSL] Starting server in HTTPS mode using {cert_path}")
+        ssl_context = (cert_path, key_path)
+    else:
+        logging.warning("[SSL] Certificates not found. Falling back to HTTP.")
+        ssl_context = None
 
     app.run(
         host="0.0.0.0",
         port=5000,
         debug=True,
-        use_reloader=False,  # reloader would spawn duplicate watchdog threads
+        use_reloader=False,
+        ssl_context=ssl_context
     )

@@ -1,8 +1,10 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useMemo } from 'react';
 import { useLocation, useNavigate, Navigate } from 'react-router-dom';
+import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
+import logoImg from '../assets/logo.png';
 import './SearchPage.css';
 
-const API_BASE = 'http://localhost:5000';
+
 
 /**
  * Encrypt a plaintext string using RSA-OAEP with the server's public key.
@@ -111,6 +113,10 @@ function SearchPage() {
                 searchData.nonce_b64,
             );
 
+            if (decrypted.ok === false) {
+                throw new Error(decrypted.error || 'The TEE worker failed to process your search.');
+            }
+
             setResults(decrypted.results || []);
             setVmInfo({ remaining: searchData.searches_remaining });
 
@@ -128,15 +134,40 @@ function SearchPage() {
         return { dot: '#64748b', badge: 'badge-low' };
     };
 
-    // Render excerpt: bold the **keyword** markers from backend
-    const renderExcerpt = (text) => {
-        const parts = text.split(/(\*\*[^*]+\*\*)/g);
+    // Render excerpt: clean PDF object strings, bold the **keyword** markers
+    const renderExcerpt = (text, matchType) => {
+        let cleanText = text
+            // Strip out raw PDF stream dictionary elements and object references
+            .replace(/\/[A-Za-z]+[\w+\-\/]*/g, '')
+            .replace(/<<.*?>>/g, '')
+            .replace(/\b\d+\s+\d+\s+(obj|R)\b/g, '')
+            .replace(/\bendobj\b/g, '')
+            .replace(/[^\w\s.,?!*'()\[\]-]/g, ' ')
+            .replace(/\s{2,}/g, ' ')
+            .trim();
+
+        const parts = cleanText.split(/(\*\*[^*]+\*\*)/g);
+        const hlClass = `hl-${(matchType || 'exact').toLowerCase()}`;
+
         return parts.map((part, i) =>
             part.startsWith('**') && part.endsWith('**')
-                ? <strong key={i} className="kw-highlight">{part.slice(2, -2)}</strong>
+                ? <strong key={i} className={`kw-highlight ${hlClass}`}>{part.slice(2, -2)}</strong>
                 : <span key={i}>{part}</span>
         );
     };
+
+    // Construct chart data 
+    const chartData = useMemo(() => {
+        if (!results) return [];
+        const pageMap = {};
+        results.forEach(r => {
+            if (!pageMap[r.page]) pageMap[r.page] = 0;
+            pageMap[r.page] += r.count;
+        });
+        return Object.keys(pageMap)
+            .map(p => ({ page: `Page ${p}`, hits: pageMap[p], rawPage: parseInt(p) }))
+            .sort((a, b) => a.rawPage - b.rawPage);
+    }, [results]);
 
     return (
         <div className="search-page">
@@ -154,16 +185,7 @@ function SearchPage() {
                     </button>
 
                     <div className="topbar-brand">
-                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
-                            <path d="M12 2L2 7L12 12L22 7L12 2Z" stroke="url(#tg)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-                            <path d="M2 17L12 22L22 17" stroke="url(#tg)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-                            <path d="M2 12L12 17L22 12" stroke="url(#tg)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-                            <defs>
-                                <linearGradient id="tg" x1="2" y1="2" x2="22" y2="22" gradientUnits="userSpaceOnUse">
-                                    <stop stopColor="#818cf8" /><stop offset="1" stopColor="#38bdf8" />
-                                </linearGradient>
-                            </defs>
-                        </svg>
+                        <img src={logoImg} alt="CipherSearch Logo" style={{ width: '28px', height: '28px', objectFit: 'contain' }} />
                         <span>CipherSearch</span>
                     </div>
 
@@ -175,13 +197,7 @@ function SearchPage() {
                     </div>
                 </div>
 
-                {/* VM status badge */}
-                {vmInfo && (
-                    <div className="vm-status-bar">
-                        <span className="vm-dot" />
-                        TEE Active — VM resets after <strong>{vmInfo.remaining}</strong> more search{vmInfo.remaining !== 1 ? 'es' : ''}
-                    </div>
-                )}
+
 
                 {/* Hero */}
                 <div className="search-hero">
@@ -233,6 +249,14 @@ function SearchPage() {
                     </div>
                 </form>
 
+                {/* VM status badge */}
+                {vmInfo && (
+                    <div className="vm-status-bar">
+                        <span className="vm-dot" />
+                        TEE Active — VM resets after <strong>{vmInfo.remaining}</strong> more search{vmInfo.remaining !== 1 ? 'es' : ''}
+                    </div>
+                )}
+
                 {/* Error */}
                 {searchError && (
                     <div className="search-error-banner">
@@ -281,32 +305,62 @@ function SearchPage() {
                                 <span>Try a different keyword or check the document contents</span>
                             </div>
                         ) : (
-                            <div className="results-list">
-                                {results.map((r, i) => {
-                                    const pc = priorityColor(r.priority);
-                                    return (
-                                        <div key={i} className="result-card" style={{ animationDelay: `${i * 80}ms` }}>
-                                            <div className="result-top">
-                                                <div className="result-left">
-                                                    <span className={`priority-badge ${pc.badge}`}>
-                                                        <span className="priority-dot" style={{ background: pc.dot }} />
-                                                        {r.priority}
-                                                    </span>
-                                                    <span className={`match-type-badge ${r.match_type === 'EXACT' ? 'exact-match' : 'phonetic-match'}`}>
-                                                        {r.match_type}
-                                                    </span>
-                                                    <span className="result-page">Page {r.page}</span>
-                                                    <span className="result-count">{r.count} hit{r.count !== 1 ? 's' : ''}</span>
+                            <div className="search-results-layout">
+                                <div className="results-list-column">
+                                    <div className="results-list">
+                                        {results.map((r, i) => {
+                                            const pc = priorityColor(r.priority);
+                                            return (
+                                                <div key={i} className="result-card" style={{ animationDelay: `${i * 80}ms` }}>
+                                                    <div className="result-top">
+                                                        <div className="result-left">
+                                                            <span className={`priority-badge ${pc.badge}`}>
+                                                                <span className="priority-dot" style={{ background: pc.dot }} />
+                                                                {r.priority}
+                                                            </span>
+                                                            <span className={`match-type-badge ${r.match_type.toLowerCase()}-match`}>
+                                                                {r.match_type}
+                                                            </span>
+                                                            <span className="result-page">Page {r.page}</span>
+                                                            <span className="result-count">{r.count} hit{r.count !== 1 ? 's' : ''}</span>
+                                                        </div>
+                                                        <div className="score-bar-wrapper">
+                                                            <div className="score-bar" style={{ width: `${r.score * 100}%` }} />
+                                                            <span className="score-label">{(r.score * 100).toFixed(0)}%</span>
+                                                        </div>
+                                                    </div>
+                                                    <p className="result-excerpt">{renderExcerpt(r.excerpt, r.match_type)}</p>
                                                 </div>
-                                                <div className="score-bar-wrapper">
-                                                    <div className="score-bar" style={{ width: `${r.score * 100}%` }} />
-                                                    <span className="score-label">{(r.score * 100).toFixed(0)}%</span>
-                                                </div>
-                                            </div>
-                                            <p className="result-excerpt">{renderExcerpt(r.excerpt)}</p>
+                                            );
+                                        })}
+                                    </div>
+                                </div>
+
+                                <div className="chart-column">
+                                    {chartData.length > 0 && (
+                                        <div className="chart-container" style={{ height: 220, background: 'rgba(15,23,42,0.8)', padding: '20px', borderRadius: '14px', border: '1px solid rgba(255,255,255,0.06)' }}>
+                                            <h4 style={{ color: '#94a3b8', margin: '0 0 15px 0', fontSize: '0.85rem' }}>Search Hits per Page</h4>
+                                            <ResponsiveContainer width="100%" height="100%">
+                                                <BarChart data={chartData}>
+                                                    <XAxis dataKey="page" tick={{ fill: '#64748b', fontSize: 12 }} stroke="#334155" />
+                                                    <YAxis tick={{ fill: '#64748b', fontSize: 12 }} stroke="#334155" allowDecimals={false} />
+                                                    <Tooltip
+                                                        contentStyle={{ background: '#0f172a', border: '1px solid #334155', borderRadius: '8px' }}
+                                                        labelStyle={{ color: '#e2e8f0' }}
+                                                        itemStyle={{ color: '#38bdf8' }}
+                                                    />
+                                                    <Bar dataKey="hits" fill="url(#colorHits)" radius={[4, 4, 0, 0]} />
+                                                    <defs>
+                                                        <linearGradient id="colorHits" x1="0" y1="0" x2="0" y2="1">
+                                                            <stop offset="5%" stopColor="#38bdf8" stopOpacity={0.8} />
+                                                            <stop offset="95%" stopColor="#6366f1" stopOpacity={0.8} />
+                                                        </linearGradient>
+                                                    </defs>
+                                                </BarChart>
+                                            </ResponsiveContainer>
                                         </div>
-                                    );
-                                })}
+                                    )}
+                                </div>
                             </div>
                         )}
                     </div>

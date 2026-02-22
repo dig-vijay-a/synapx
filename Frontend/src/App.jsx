@@ -1,6 +1,6 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
-import UploadPage from './pages/UploadPage';
-import SearchPage from './pages/SearchPage';
+import UploadPage from './pages/uploadpage/UploadPage';
+import SearchPage from './pages/searchpage/SearchPage';
 import './App.css';
 
 function App() {

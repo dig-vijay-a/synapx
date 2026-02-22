@@ -11,9 +11,9 @@ from flask import Blueprint, request, jsonify
 from cryptography.hazmat.primitives.ciphers.aead import AESGCM
 
 import config
-from routes.session import get_session, mark_session_used, delete_session
-from routes.upload  import _load_index
-from tee.tee_manager import tee_manager
+from controllers.session import get_session, mark_session_used, delete_session
+from controllers.upload  import _load_index
+from utils.tee_manager import tee_manager
 
 search_bp = Blueprint("search", __name__)
 
