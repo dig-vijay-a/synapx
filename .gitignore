@@ -1,0 +1,19 @@
+__pycache__/
+**/__pycache__/
+.venv/
+CloudVault/
+cert.pem
+key.pem
+.devkey
+
+# Environment files
+.env
+.env.*
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Editor files
+.vscode/
+.idea/

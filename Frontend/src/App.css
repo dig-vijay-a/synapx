@@ -1,0 +1,9 @@
+/* App-level resets — pages handle their own full layout */
+#root {
+  width: 100%;
+  min-height: 100vh;
+  margin: 0;
+  padding: 0;
+  text-align: left;
+  max-width: none;
+}

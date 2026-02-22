@@ -1,0 +1,7 @@
+flask>=3.0.0
+flask-cors>=4.0.0
+cryptography>=42.0.0
+jellyfish>=1.1.0
+docker>=7.1.0
+pypdf>=4.0.0
+python-docx>=1.1.0
